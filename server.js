@@ -56,3 +56,40 @@ app.post("/incidentes", async (req,res) => {
   await db.run(`INSERT INTO incidentes(tipo_problema, localizacao, descricao, prioridade, nome_solicitante, data_registro, hora_registro) VALUES (?, ?, ?, ?, ?, ?, ?)`, [ tipo_problema, localizacao, descricao, prioridade, nome_solicitante, data_registro, hora_registro])         
   res.send(`Incidente novo registrado: ${tipo_problema} registrado na data ${data_registro} por ${nome_solicitante}`)
 });
+
+
+// rota de Atualizazação
+app.put("/incidentes/:id",async(req,res) => {
+
+  // pega o ID do incidente que vem a URL (ex: incidentes/4)
+const { id } = req.params;
+
+// pega os novos dados enviados no corpo da requisiçaão
+const {descricao, prioridade, status_resolucao} = req.body;
+
+const db = await criarBanco();
+
+
+await db.run(`
+  UPDATE incidentes SET descricao = ?, prioridade = ?, status_resolucao = ?
+  WHERE id = ?`, [descricao, prioridade, status_resolucao, id]
+  )
+
+//Enviar uma resposta para o cliete
+res.send(` o incidente de ${id} foi atualizada com sucesso`)
+});
+
+
+app.delete("/incidentes/:id", async(req,res) => {
+
+const {id} = req.params;
+
+const db = await criarBanco()
+
+
+await db.run(`
+  DELETE FROM incidentes WHERE id = ?
+  `, [id])
+  res.sen(`o incidente de ${id} foi removido com sucesso `);
+  
+  });
