@@ -2,7 +2,6 @@
 const express = require( `express` ) // Framework que cria o servidor e as rotas
 const { criarBanco } = require(`./database`) //A chave que vai abrir a conecção com o banco de dados
 
-
 const  cors = require('cors'); // Importa o middleware CORS
 
 const app = express() // inicialização: ligando o otor do servidor
@@ -10,7 +9,18 @@ const app = express() // inicialização: ligando o otor do servidor
 app.use(cors()) // Habilita o CORS para todas as rotas
 
 app.use( express.json()) // Tradutor: configura o Express para entender dados enviados no formato JSON
-// Criando a Rota Principal /Rota Raiz
+
+// Inicializar banco de dados
+let db;
+(async () => {
+  try {
+    db = await criarBanco();
+    console.log('Banco de dados inicializado com sucesso.');
+  } catch (err) {
+    console.error('Erro ao inicializar banco de dados:', err);
+    process.exit(1);
+  }
+})();
 
 
 app.get( `/`, (req,res) => {
@@ -28,29 +38,28 @@ app.get( `/`, (req,res) => {
 
 //Rota de Listagem - Para buscar todos os problemas  registrados 
 app.get("/incidentes", async (req,res) => {
-const db = await criarBanco() // Chamamos a função do outro arquivo. Await é o "aguarde", pois o banco precisa de tempo pra abrir.
 
-const listaIncidentes = await db.all(`SELECT * FROM incidentes`)
+const listaIncidentes = await db.query(`SELECT * FROM incidentes`)
 
-res.json(listaIncidentes) //Entrega esses dados para o cliente 
+res.json(listaIncidentes.rows) //Entrega esses dados para o cliente 
 
 });
 
 //Rota para buscar incidente específico por ID
 app.get("/incidentes/:id", async (req,res) => {
 const { id } = req.params
-const db = await criarBanco()
-const incidenteEspecifico = await db.all(`SELECT * FROM incidentes WHERE id = ?` , [id])
-res.json(incidenteEspecifico)
+
+const incidenteEspecifico = await db.query(`SELECT * FROM incidentes WHERE id = $1` , [id])
+res.json(incidenteEspecifico.rows)
 });
 
 //Rota para criar novo incidente
 app.post("/incidentes", async (req,res) => {
   const {tipo_problema, localizacao, descricao, prioridade, nome_solicitante, data_registro, hora_registro}= req.body
-  const db = await criarBanco()
-  await db.run(`
+
+  await db.query(`
     INSERT INTO incidentes(tipo_problema, localizacao, descricao, prioridade, 
-    nome_solicitante, data_registro, hora_registro) VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+    nome_solicitante, data_registro, hora_registro) VALUES ($1, $2, $3, $4, $5, $6, $7)`, 
     [
        tipo_problema, 
        localizacao, 
@@ -78,16 +87,13 @@ app.put("/incidentes/:id", async (req,res) => {
     // pega os novos dados enviados no corpo da requisição (o que será atualizado)
     const { descricao, prioridade, status_resolucao } = req.body;
 
-    // Abre a conexão com o banco de dados
-    const db = await criarBanco();
-
-    const result = await db.run(`
+    const result = await db.query(`
       UPDATE incidentes
-      SET descricao = ?, prioridade = ?, status_resolucao = ?
-      WHERE id = ?`, [descricao, prioridade, status_resolucao, id]
+      SET descricao = $1, prioridade = $2, status_resolucao = $3
+      WHERE id = $4`, [descricao, prioridade, status_resolucao, id]
     );
 
-    if (!result || result.changes === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ erro: `Incidente com id ${id} não encontrado` });
     }
 
@@ -102,13 +108,12 @@ app.put("/incidentes/:id", async (req,res) => {
 app.delete("/incidentes/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const db = await criarBanco();
 
-    const result = await db.run(`
-      DELETE FROM incidentes WHERE id = ?
+    const result = await db.query(`
+      DELETE FROM incidentes WHERE id = $1
     `, [id]);
 
-    if (!result || result.changes === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ erro: `Incidente com id ${id} não encontrado` });
     }
 
