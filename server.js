@@ -121,24 +121,6 @@ app.delete("/incidentes/:id", async (req, res) => {
 
 
 
-// Rota de listagem - Para buscar todos os problemas  registrados
-app.get("/incidentes", async (req,res) => {
-const db = await criarBanco(); // Chamamos a função do outro arquivo. Await é o "aguarde", pois o banco precisa de tempo pra abrir.
-const listaIncidentes = await db.all(`SELECT * FROM incidentes`);
-res.json(listaIncidentes); //Entrega esses dados para o cliente em formato JSON
-
-// Rota Especifica 
-app.get("/incidentes/:id", async (req,res) => {
-  const { id } = req.params;
-  const db = await criarBanco();
-  const incidenteEspecifico = await db.all(
-    `SELECT * FROM incidentes WHERE id = ?`, 
-    [id]);
-  res.json(incidenteEspecifico);
-}
-
-);
-
 
 //Porta do servidor
 
@@ -149,3 +131,4 @@ const PORT = process.env.PORT || 3000; // Usa a porta do ambiente ou 3000 como p
 app.listen(PORT, () => {
    console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
+
